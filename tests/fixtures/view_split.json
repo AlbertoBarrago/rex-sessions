@@ -1,0 +1,104 @@
+{
+  "revision": 1,
+  "session_id": "session:01a18893-8ea3-761a-94e4-4b5cbeafa317",
+  "label": "rexsess-probe",
+  "active_window_id": "window:01a18893-8ec8-7c19-9893-8c9549f034af",
+  "windows": [
+    {
+      "window_id": "window:01a18893-8ec8-7c19-9893-8c9549f034af",
+      "label": "w1",
+      "focused_block_id": "block:01a18893-8ea3-76a7-b6e7-095ff0af4fbd",
+      "layers": [
+        {
+          "layer_id": "layer:01a18893-8ec8-7c21-bcb4-ab760afb96a4",
+          "kind": "tiled",
+          "bounds": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "layout": {
+            "rect": [
+              0,
+              0,
+              1,
+              1
+            ],
+            "split": {
+              "split_id": "split:01a18893-8ec8-7c25-9ef0-c68b7322ed4d",
+              "direction": "horizontal",
+              "ratio": 0.3,
+              "before": {
+                "rect": [
+                  0,
+                  0,
+                  0.3,
+                  1
+                ],
+                "block_id": "block:01a18893-8ea3-76a7-b6e7-095ff0af4fbd"
+              },
+              "after": {
+                "rect": [
+                  0.3,
+                  0,
+                  0.7,
+                  1
+                ],
+                "split": {
+                  "split_id": "split:01a18893-8ec8-7c26-836b-0d2aff61fcb3",
+                  "direction": "vertical",
+                  "ratio": 0.5,
+                  "before": {
+                    "rect": [
+                      0.3,
+                      0,
+                      0.7,
+                      0.5
+                    ],
+                    "block_id": "block:01a18893-8eb3-7a9a-b22e-adfe5a5805e1"
+                  },
+                  "after": {
+                    "rect": [
+                      0.3,
+                      0.5,
+                      0.7,
+                      0.5
+                    ],
+                    "block_id": "block:01a18893-8ebe-7afc-9b6a-f3ecf4139231"
+                  }
+                }
+              }
+            }
+          },
+          "blocks": [
+            {
+              "block_id": "block:01a18893-8ea3-76a7-b6e7-095ff0af4fbd",
+              "label": "shell",
+              "creator_name": "com.superlogical.terminal",
+              "flavor": "com.superlogical.terminal.shell",
+              "host_id": "00000000-0000-0000-0000-000000000000",
+              "owner": "client:00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "block_id": "block:01a18893-8eb3-7a9a-b22e-adfe5a5805e1",
+              "label": "shell",
+              "creator_name": "com.superlogical.terminal",
+              "flavor": "com.superlogical.terminal.shell",
+              "host_id": "00000000-0000-0000-0000-000000000000",
+              "owner": "client:00000000-0000-0000-0000-000000000000"
+            },
+            {
+              "block_id": "block:01a18893-8ebe-7afc-9b6a-f3ecf4139231",
+              "label": "logs",
+              "creator_name": "com.superlogical.terminal",
+              "flavor": "com.superlogical.terminal.shell",
+              "host_id": "00000000-0000-0000-0000-000000000000",
+              "owner": "client:00000000-0000-0000-0000-000000000000"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

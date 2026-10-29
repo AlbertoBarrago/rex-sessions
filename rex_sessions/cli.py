@@ -1,0 +1,110 @@
+"""Command-line entry point: save, restore, list, install-agent, uninstall-agent."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+from . import agent, snapshot, store
+from .restore import restore
+from .rex_client import RexClient, RexError
+
+DEFAULT_MIN_UPTIME = 600
+DEFAULT_INTERVAL = 120
+
+
+def _server_uptime(client: RexClient) -> float:
+    started = datetime.fromisoformat(client.server_status()["started_at"].replace("Z", "+00:00"))
+    return (datetime.now(timezone.utc) - started).total_seconds()
+
+
+def cmd_save(args: argparse.Namespace) -> int:
+    client = RexClient()
+    if args.auto:
+        # A freshly (re)started server holds none of the old sessions yet.
+        # Saving now would make latest.json point at that empty state and
+        # make the pre-update snapshot the non-default one, so wait it out.
+        uptime = _server_uptime(client)
+        if uptime < args.min_uptime:
+            print(f"skip: server up {uptime:.0f}s < {args.min_uptime}s")
+            return 0
+    snap = snapshot.capture(client)
+    path = store.save(snap, keep=args.keep)
+    print(f"saved {len(snap['sessions'])} session(s) to {path}" if path else "unchanged, nothing written")
+    return 0
+
+
+def cmd_restore(args: argparse.Namespace) -> int:
+    source = Path(args.source) if args.source else store.store_dir() / store.LATEST_NAME
+    if not source.is_file():
+        print(f"error: snapshot not found: {source}", file=sys.stderr)
+        return 1
+    snap = store.load(source)
+    report = restore(snap, RexClient(), only=set(args.session) if args.session else None, dry_run=args.dry_run)
+    verb = "would create" if args.dry_run else "created"
+    print(f"{verb}: {', '.join(report.created) or '-'}")
+    print(f"already present: {', '.join(report.skipped_existing) or '-'}")
+    return 0
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    paths = store.history()
+    if not paths:
+        print(f"no snapshots in {store.store_dir()}")
+        return 0
+    for path in paths[-args.limit:]:
+        snap = store.load(path)
+        labels = ", ".join(s["label"] for s in snap["sessions"])
+        print(f"{path.name}  {len(snap['sessions'])} session(s): {labels}")
+    return 0
+
+
+def cmd_install_agent(args: argparse.Namespace) -> int:
+    path = agent.install(args.interval)
+    print(f"installed {agent.LABEL} ({path}), every {args.interval}s")
+    return 0
+
+
+def cmd_uninstall_agent(_: argparse.Namespace) -> int:
+    print("removed" if agent.uninstall() else "not installed")
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="rex-sessions", description="Save and restore Rex sessions.")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("save", help="snapshot all sessions")
+    p.add_argument("--auto", action="store_true", help="autosave mode: skip right after a server restart")
+    p.add_argument("--min-uptime", type=int, default=DEFAULT_MIN_UPTIME, help="seconds (with --auto)")
+    p.add_argument("--keep", type=int, default=store.DEFAULT_KEEP, help="snapshots to keep")
+    p.set_defaults(func=cmd_save)
+
+    p = sub.add_parser("restore", help="recreate sessions missing from the server")
+    p.add_argument("--from", dest="source", help="snapshot file (default: latest)")
+    p.add_argument("--session", action="append", help="restore only this label (repeatable)")
+    p.add_argument("--dry-run", action="store_true")
+    p.set_defaults(func=cmd_restore)
+
+    p = sub.add_parser("list", help="show saved snapshots")
+    p.add_argument("--limit", type=int, default=10)
+    p.set_defaults(func=cmd_list)
+
+    p = sub.add_parser("install-agent", help="install the launchd autosave agent")
+    p.add_argument("--interval", type=int, default=DEFAULT_INTERVAL, help="seconds between saves")
+    p.set_defaults(func=cmd_install_agent)
+
+    p = sub.add_parser("uninstall-agent", help="remove the launchd autosave agent")
+    p.set_defaults(func=cmd_uninstall_agent)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        return args.func(args)
+    except RexError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1

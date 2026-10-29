@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rex-sessions"
+version = "0.1.0"
+description = "Save and restore Rex sessions across server restarts"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+rex-sessions = "rex_sessions.cli:main"
+
+[tool.setuptools]
+packages = ["rex_sessions"]
