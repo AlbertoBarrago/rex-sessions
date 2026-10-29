@@ -115,6 +115,35 @@ def build_session_snapshot(view: dict[str, Any], info: BlockInfoFn) -> dict[str,
     return {"label": view.get("label"), "active_window_index": active_index, "windows": windows}
 
 
+def _pane_lines(node: dict[str, Any], home: str) -> list[str]:
+    """Flatten a layout tree into one line per pane, in layout order."""
+    if "split" in node:
+        split = node["split"]
+        return _pane_lines(split["before"], home) + _pane_lines(split["after"], home)
+    block = node["block"]
+    cwd = block.get("cwd") or "?"
+    if home and (cwd == home or cwd.startswith(home + "/")):
+        cwd = "~" + cwd[len(home):]
+    parts = [cwd]
+    if block.get("program"):
+        parts.append(f"[{block['program']}]")
+    if block.get("label") and block["label"] != "shell":
+        parts.append(f"({block['label']})")
+    return [" ".join(parts)]
+
+
+def format_snapshot(snap: dict[str, Any], home: str = "") -> str:
+    """Render a snapshot as an indented session > tab > pane tree."""
+    lines = [f"saved {snap['saved_at']}"]
+    for session in snap["sessions"]:
+        lines.append(f"\n{session['label']}")
+        for index, window in enumerate(session["windows"]):
+            active = " *" if index == session.get("active_window_index") else ""
+            lines.append(f"  {index + 1}. {window.get('label') or 'tab'}{active}")
+            lines.extend(f"       {pane}" for pane in _pane_lines(window["layout"], home))
+    return "\n".join(lines)
+
+
 def _live_block_info(client: RexClient, session_id: str) -> BlockInfoFn:
     def info(block_id: str) -> BlockInfo:
         try:

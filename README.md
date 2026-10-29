@@ -9,25 +9,32 @@ Pure Python standard library, no dependencies. Talks to Rex only through the `re
 ## Install
 
 ```sh
-pipx install -e ~/Projects/rex-sessions   # or: uv tool install -e ~/Projects/rex-sessions
-rex-sessions install-agent                # autosave every 120s via launchd
+git clone https://github.com/AlbertoBarrago/rex-sessions.git
+cd rex-sessions
+./install.sh                   # links bin/rex-sessions into ~/.local/bin
+./install.sh /usr/local/bin    # or any other directory on PATH
+rex-sessions autosave on       # snapshot every 120s via launchd
+rex-sessions status            # verify everything is wired up
 ```
 
-Without installing, every command also works as `python3 -m rex_sessions ...` from the repo root.
+Requires Python 3.11+ and `rex` on `PATH` (or `REX_BIN`). The install is a symlink, so updating the clone updates the CLI.
 
 ## Usage
 
 ```sh
-rex-sessions save                       # snapshot now
-rex-sessions list                       # saved snapshots, newest last
-rex-sessions restore --dry-run          # what would be recreated
-rex-sessions restore                    # recreate sessions missing from the server
-rex-sessions restore --session IRIS     # only one session (repeatable)
-rex-sessions restore --from <file>      # from an older snapshot
-rex-sessions uninstall-agent
+rex-sessions status                       # server, autosave agent, last snapshot, what restore would do
+rex-sessions save                         # snapshot now
+rex-sessions list                         # saved snapshots, newest last
+rex-sessions show [FILE]                  # session > tab > pane tree with cwd and program
+rex-sessions restore --dry-run            # what would be recreated
+rex-sessions restore                      # recreate sessions missing from the server
+rex-sessions restore --session IRIS       # only one session (repeatable)
+rex-sessions restore --from <file>        # from an older snapshot
+rex-sessions autosave on [--interval N]   # install and start the launchd agent
+rex-sessions autosave off
 ```
 
-Typical flow after a Rex update: open Rex, run `rex-sessions restore`.
+Typical flow after a Rex update: open Rex, run `rex-sessions restore`. `status` exits 1 when a check fails (no `rex`, server unreachable, agent installed but not loaded), so it also works in scripts.
 
 ## Behavior
 

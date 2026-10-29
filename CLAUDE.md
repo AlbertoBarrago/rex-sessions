@@ -11,7 +11,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```sh
 python3 -m unittest discover -s tests -v                                   # all tests
 python3 -m unittest tests.test_roundtrip.RestoreTest.test_only_filter       # single test
-python3 -m rex_sessions save|restore|list|install-agent|uninstall-agent     # run without installing
+bin/rex-sessions save|restore|list|show|status|autosave on|off             # what install.sh symlinks
+python3 -m rex_sessions ...                                                 # same, used by the launchd agent
 REX_SESSIONS_DIR=/some/tmp python3 -m rex_sessions save                     # isolate from the real store
 ```
 
@@ -26,6 +27,8 @@ Data flows `rex CLI -> snapshot -> store (JSON on disk) -> restore -> rex CLI`:
 - `restore.py`: maps each snapshot session to one `session.create` payload (`initial_windows` with the full split tree, shell `options.cwd`), so a session is created atomically. Sessions are matched **by label** to make restore idempotent. `session.create` activates the last window, so the saved active window is re-focused afterwards. Saved `program` is never re-run by design.
 - `store.py`: timestamped `snapshot-*.json` history plus `latest.json`; skips writing when `sessions` is unchanged; rotates to `--keep`.
 - `agent.py`: launchd agent (`dev.albz.rex-sessions.autosave`) running `save --auto`; pins `sys.executable`, `PYTHONPATH`, `REX_BIN`, `REX_SESSIONS_DIR` into the plist.
+- `status.py`: `evaluate()` is pure (`StatusInputs` in, `Check` list out) and is what tests cover; `gather()` does the I/O. `status` exits 1 only on `FAIL` checks.
+- `bin/rex-sessions` + `install.sh`: same distribution model as `~/Projects/rex-themes` (symlink in `~/.local/bin`, launcher resolves its real path).
 - `cli.py`: `save --auto` skips while server uptime (`server.status.started_at`) is below `--min-uptime` (600s). This guard is what keeps the pre-update snapshot as `latest.json`; don't remove it.
 
 ## Rex API notes

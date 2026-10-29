@@ -1,4 +1,4 @@
-"""Command-line entry point: save, restore, list, install-agent, uninstall-agent."""
+"""Command-line entry point for `rex-sessions`."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import agent, snapshot, store
+from . import agent, snapshot, status, store
 from .restore import restore
 from .rex_client import RexClient, RexError
 
@@ -61,19 +61,38 @@ def cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_install_agent(args: argparse.Namespace) -> int:
-    path = agent.install(args.interval)
-    print(f"installed {agent.LABEL} ({path}), every {args.interval}s")
+def cmd_show(args: argparse.Namespace) -> int:
+    source = Path(args.source) if args.source else store.store_dir() / store.LATEST_NAME
+    if not source.is_file():
+        print(f"error: snapshot not found: {source}", file=sys.stderr)
+        return 1
+    print(snapshot.format_snapshot(store.load(source), home=str(Path.home())))
     return 0
 
 
-def cmd_uninstall_agent(_: argparse.Namespace) -> int:
-    print("removed" if agent.uninstall() else "not installed")
+def cmd_status(args: argparse.Namespace) -> int:
+    marks = {status.OK: "✓", status.WARN: "!", status.FAIL: "✗"}
+    checks = status.evaluate(status.gather(args.min_uptime))
+    width = max(len(c.title) for c in checks)
+    for check in checks:
+        print(f"{marks[check.level]} {check.title.ljust(width)}  {check.detail}")
+    print(f"\nstore: {store.store_dir()}")
+    return 1 if any(c.level == status.FAIL for c in checks) else 0
+
+
+def cmd_autosave_on(args: argparse.Namespace) -> int:
+    path = agent.install(args.interval)
+    print(f"autosave on: every {args.interval}s ({path})")
+    return 0
+
+
+def cmd_autosave_off(_: argparse.Namespace) -> int:
+    print("autosave off" if agent.uninstall() else "autosave was not on")
     return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="rex-sessions", description="Save and restore Rex sessions.")
+    parser = argparse.ArgumentParser(prog="rex-sessions", description="Save and restore Rex sessions across server restarts.")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("save", help="snapshot all sessions")
@@ -92,12 +111,20 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--limit", type=int, default=10)
     p.set_defaults(func=cmd_list)
 
-    p = sub.add_parser("install-agent", help="install the launchd autosave agent")
-    p.add_argument("--interval", type=int, default=DEFAULT_INTERVAL, help="seconds between saves")
-    p.set_defaults(func=cmd_install_agent)
+    p = sub.add_parser("show", help="print a snapshot as a session > tab > pane tree")
+    p.add_argument("source", nargs="?", help="snapshot file (default: latest)")
+    p.set_defaults(func=cmd_show)
 
-    p = sub.add_parser("uninstall-agent", help="remove the launchd autosave agent")
-    p.set_defaults(func=cmd_uninstall_agent)
+    p = sub.add_parser("status", help="check server, autosave agent and snapshots")
+    p.add_argument("--min-uptime", type=int, default=DEFAULT_MIN_UPTIME, help=argparse.SUPPRESS)
+    p.set_defaults(func=cmd_status)
+
+    p = sub.add_parser("autosave", help="turn the launchd autosave agent on or off")
+    autosave = p.add_subparsers(dest="state", required=True)
+    on = autosave.add_parser("on", help="install and start the agent")
+    on.add_argument("--interval", type=int, default=DEFAULT_INTERVAL, help="seconds between saves")
+    on.set_defaults(func=cmd_autosave_on)
+    autosave.add_parser("off", help="stop and remove the agent").set_defaults(func=cmd_autosave_off)
     return parser
 
 

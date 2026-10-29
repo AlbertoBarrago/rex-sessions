@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import os
 import plistlib
+import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from .rex_client import resolve_rex_binary
@@ -51,6 +53,31 @@ def install(interval: int) -> Path:
     if result.returncode != 0:
         raise RuntimeError(f"launchctl bootstrap failed: {result.stderr.strip()}")
     return PLIST_PATH
+
+
+@dataclass
+class AgentStatus:
+    installed: bool
+    loaded: bool
+    interval: int | None
+    last_exit: str | None
+
+
+def status() -> AgentStatus:
+    """Read the agent state from its plist and `launchctl print`."""
+    if not PLIST_PATH.exists():
+        return AgentStatus(installed=False, loaded=False, interval=None, last_exit=None)
+    with PLIST_PATH.open("rb") as fh:
+        interval = plistlib.load(fh).get("StartInterval")
+    result = _launchctl("print", f"gui/{os.getuid()}/{LABEL}")
+    # Top-level job fields are indented with exactly one tab; nested sections use more.
+    match = re.search(r"^\tlast exit code = (.+)$", result.stdout, re.MULTILINE)
+    return AgentStatus(
+        installed=True,
+        loaded=result.returncode == 0,
+        interval=interval,
+        last_exit=match.group(1) if match else None,
+    )
 
 
 def uninstall() -> bool:
