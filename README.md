@@ -1,5 +1,11 @@
 # rex-sessions
 
+> [!NOTE]
+> The latest Rex release saves and restores sessions natively.
+> It can't protect the update that installs it, though: that update still wipes your sessions.
+> rex-sessions bridges that one update: run `rex-sessions save` right before updating, then `rex-sessions restore` once the new version is running.
+> After that, the built-in restore takes over and you can run `rex-sessions autosave off`.
+
 Save and restore [Rex](https://www.superlogical.com/rex) sessions, so updating or restarting the Rex server doesn't lose your workspace.
 
 It snapshots every session (windows, split layout and ratios, pane labels, working directories) and recreates the missing ones later with a single atomic `session.create` call per session.
