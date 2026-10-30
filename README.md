@@ -6,6 +6,8 @@ It snapshots every session (windows, split layout and ratios, pane labels, worki
 
 Pure Python standard library, no dependencies. Talks to Rex only through the `rex` CLI.
 
+![rex-sessions demo](docs/demo.gif)
+
 ## Install
 
 ```sh
