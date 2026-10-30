@@ -91,6 +91,27 @@ def cmd_autosave_off(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_uninstall(args: argparse.Namespace) -> int:
+    target = Path(args.bin_dir).expanduser() / "rex-sessions"
+    launcher = Path(__file__).resolve().parent.parent / "bin" / "rex-sessions"
+    if target.is_symlink():
+        if target.resolve() != launcher.resolve():
+            print(f"error: refusing to remove unrelated symlink: {target}", file=sys.stderr)
+            return 1
+    elif target.exists():
+        print(f"error: refusing to remove non-symlink: {target}", file=sys.stderr)
+        return 1
+
+    cmd_autosave_off(args)
+    if target.is_symlink():
+        target.unlink()
+        print(f"removed {target}")
+    else:
+        print(f"CLI link already absent: {target}")
+    print(f"snapshots kept in {store.store_dir()}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="rex-sessions", description="Save and restore Rex sessions across server restarts.")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -125,6 +146,10 @@ def build_parser() -> argparse.ArgumentParser:
     on.add_argument("--interval", type=int, default=DEFAULT_INTERVAL, help="seconds between saves")
     on.set_defaults(func=cmd_autosave_on)
     autosave.add_parser("off", help="stop and remove the agent").set_defaults(func=cmd_autosave_off)
+
+    p = sub.add_parser("uninstall", help="remove the autosave agent and CLI symlink; keep snapshots")
+    p.add_argument("--bin-dir", default=str(Path.home() / ".local" / "bin"), help="installation directory (default: ~/.local/bin)")
+    p.set_defaults(func=cmd_uninstall)
     return parser
 
 
@@ -132,6 +157,6 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         return args.func(args)
-    except RexError as exc:
+    except (RexError, OSError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

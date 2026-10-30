@@ -4,7 +4,7 @@
 > The latest Rex release saves and restores sessions natively.
 > It can't protect the update that installs it, though: that update still wipes your sessions.
 > rex-sessions bridges that one update: run `rex-sessions save` right before updating, then `rex-sessions restore` once the new version is running.
-> After that, the built-in restore takes over and you can run `rex-sessions autosave off`.
+> After that, the built-in restore takes over and you can run `rex-sessions uninstall`.
 
 Save and restore [Rex](https://www.superlogical.com/rex) sessions, so updating or restarting the Rex server doesn't lose your workspace.
 
@@ -40,7 +40,11 @@ rex-sessions restore --session IRIS       # only one session (repeatable)
 rex-sessions restore --from <file>        # from an older snapshot
 rex-sessions autosave on [--interval N]   # install and start the launchd agent
 rex-sessions autosave off
+rex-sessions uninstall                   # remove autosave agent and CLI symlink; keep snapshots
 ```
+
+For a custom installation directory, use `rex-sessions uninstall --bin-dir /usr/local/bin`.
+Uninstall preserves snapshots and the clone, and refuses to remove files or symlinks belonging to another installation.
 
 Typical flow after a Rex update: open Rex, run `rex-sessions restore`. `status` exits 1 when a check fails (no `rex`, server unreachable, agent installed but not loaded), so it also works in scripts.
 
